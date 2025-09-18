@@ -1,0 +1,82 @@
+import { onRequest } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+
+admin.initializeApp();
+const db = admin.firestore();
+
+// ✅ CORS whitelist — production + local dev
+const ORIGINS = [
+  "https://neurosparked.com",
+  "https://www.neurosparked.com",
+  "https://neurosparked.ai",
+  "https://www.neurosparked.ai",
+];
+
+// Add localhost for dev (only when NODE_ENV=development)
+if (process.env.NODE_ENV === "development") {
+  ORIGINS.push("http://localhost:5173");
+}
+
+// ✅ Main API entrypoint
+export const api = onRequest({ cors: ORIGINS }, async (req, res) => {
+  try {
+    // --- Health check ---
+    if (req.method === "GET" && req.path === "/health") {
+      return res.json({ ok: true, ts: Date.now() });
+    }
+
+    // --- List published courses ---
+    if (req.method === "GET" && req.path === "/courses") {
+      const snap = await db.collection("courses")
+        .where("status", "==", "published")
+        .get();
+      return res.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+
+    // --- Enroll in a course ---
+    if (req.method === "POST" && req.path === "/enroll") {
+      const token = req.headers.authorization?.split("Bearer ")[1];
+      if (!token) return res.status(401).json({ error: "unauthorized" });
+
+      const decoded = await admin.auth().verifyIdToken(token);
+      const { courseId } = req.body;
+      if (!courseId) return res.status(400).json({ error: "missing courseId" });
+
+      const enr = await db.collection("enrollments").add({
+        userId: decoded.uid,
+        courseId,
+        status: "active",
+        enrolledAt: Date.now(),
+      });
+      return res.json({ id: enr.id });
+    }
+
+    // --- Update lesson progress ---
+    if (req.method === "POST" && req.path === "/progress") {
+      const token = req.headers.authorization?.split("Bearer ")[1];
+      if (!token) return res.status(401).json({ error: "unauthorized" });
+
+      const decoded = await admin.auth().verifyIdToken(token);
+      const { courseId, lessonId, status, score } = req.body;
+      if (!courseId || !lessonId || !status) {
+        return res.status(400).json({ error: "missing fields" });
+      }
+
+      const prog = await db.collection("progress").add({
+        userId: decoded.uid,
+        courseId,
+        lessonId,
+        status,
+        score: score ?? null,
+        completedAt: status === "completed" ? Date.now() : null,
+      });
+      return res.json({ id: prog.id });
+    }
+
+    // --- Fallback ---
+    return res.status(404).json({ error: "not found" });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ error: err.message });
+  }
+});

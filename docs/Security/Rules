@@ -1,0 +1,32 @@
+
+---
+
+## 04_app_flow.md
+```markdown
+# App Flow — Roadmap
+
+## Milestone M0: Walking Skeleton
+- [ ] Health endpoint.
+- [ ] List published courses.
+- [ ] Enroll self.
+- [ ] Mark lesson complete.
+- [ ] Basic React pages wired to API.
+
+## Milestone M1: Authoring & Roles
+- [ ] Instructor: create/edit courses, modules, lessons.
+- [ ] Admin: role assignment script.
+- [ ] Firestore Rules v1.
+
+## Milestone M2: Submissions & Grading
+- [ ] Learner uploads → Storage.
+- [ ] Submission doc creation.
+- [ ] Instructor grading UI.
+
+## Milestone M3: Discussions/Announcements
+- [ ] Threaded discussions.
+- [ ] Announcements feed.
+
+## Milestone M4: Analytics & Exports
+- [ ] GA4 events (course_view, enroll, lesson_complete, submission_upload).
+- [ ] Progress dashboards.
+- [ ] CSV exports.
